@@ -168,12 +168,15 @@ body {
     align-items: center;
     justify-content: center;
     perspective: 1000px;
-    margin-bottom: 32px;
+    margin-bottom: 24px;
+    min-height: 0;
+    min-width: 0;
 }
 
 .flashcard {
-    width: 100%;
-    max-width: 320px;
+    height: 100%;
+    max-height: 420px;
+    max-width: 100%;
     aspect-ratio: 3 / 4;
     background-color: transparent;
     cursor: pointer;
