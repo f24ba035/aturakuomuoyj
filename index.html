@@ -51,12 +51,18 @@
                 <div id="flashcard" class="flashcard">
                     <div class="card-inner">
                         <div class="card-front">
-                            <button id="btn-card-toggle" class="card-toggle-btn plus" title="このカードを出題リストから除外/追加" aria-label="出題リスト切り替え">＋</button>
+                            <div class="card-toggle-group">
+                                <button id="btn-card-plus" class="card-btn btn-plus" title="出題リストに追加 (＋)" aria-label="出題リストに追加">＋</button>
+                                <button id="btn-card-minus" class="card-btn btn-minus" title="出題リストから除外 (ー)" aria-label="出題リストから除外">ー</button>
+                            </div>
                             <h2 id="card-initial" class="initial-letter">あ</h2>
                             <p class="hint">タップして続きを見る</p>
                         </div>
                         <div class="card-back">
-                            <button id="btn-card-toggle-back" class="card-toggle-btn plus" title="このカードを出題リストから除外/追加" aria-label="出題リスト切り替え">＋</button>
+                            <div class="card-toggle-group-back">
+                                <button id="btn-card-plus-back" class="card-btn btn-plus" title="出題リストに追加 (＋)" aria-label="出題リストに追加">＋</button>
+                                <button id="btn-card-minus-back" class="card-btn btn-minus" title="出題リストから除外 (ー)" aria-label="出題リストから除外">ー</button>
+                            </div>
                             <h2 id="card-initial-back" class="initial-letter-small">あ</h2>
                             <p id="card-text" class="full-text">浅間のいたずら 鬼の押出し</p>
                         </div>

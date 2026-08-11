@@ -60,8 +60,10 @@ const DOM = {
     cardInitial: document.getElementById('card-initial'),
     cardInitialBack: document.getElementById('card-initial-back'),
     cardText: document.getElementById('card-text'),
-    btnCardToggle: document.getElementById('btn-card-toggle'),
-    btnCardToggleBack: document.getElementById('btn-card-toggle-back'),
+    btnCardPlus: document.getElementById('btn-card-plus'),
+    btnCardMinus: document.getElementById('btn-card-minus'),
+    btnCardPlusBack: document.getElementById('btn-card-plus-back'),
+    btnCardMinusBack: document.getElementById('btn-card-minus-back'),
     controls: document.getElementById('controls'),
     
     progressBar: document.getElementById('progress-bar'),
@@ -192,28 +194,32 @@ function updateCard() {
 
 function updateCardToggleState(cardId) {
     const isEnabled = enabledCardIds.has(cardId);
-    [DOM.btnCardToggle, DOM.btnCardToggleBack].forEach(btn => {
+    [DOM.btnCardPlus, DOM.btnCardPlusBack].forEach(btn => {
         if (!btn) return;
         if (isEnabled) {
-            btn.className = 'card-toggle-btn plus';
-            btn.textContent = '＋';
-            btn.title = '出題リストに含まれています (タップで次回から除外)';
+            btn.classList.add('active');
         } else {
-            btn.className = 'card-toggle-btn minus';
-            btn.textContent = 'ー';
-            btn.title = '出題リストから外されています (タップで次回から追加)';
+            btn.classList.remove('active');
+        }
+    });
+    [DOM.btnCardMinus, DOM.btnCardMinusBack].forEach(btn => {
+        if (!btn) return;
+        if (!isEnabled) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
         }
     });
 }
 
-function toggleCurrentCard(e) {
+function setCardEnabledState(e, enable) {
     e.stopPropagation();
     if (currentIndex >= currentDeck.length) return;
     const card = currentDeck[currentIndex];
-    if (enabledCardIds.has(card.id)) {
-        enabledCardIds.delete(card.id);
-    } else {
+    if (enable) {
         enabledCardIds.add(card.id);
+    } else {
+        enabledCardIds.delete(card.id);
     }
     Storage.saveEnabledIds(enabledCardIds);
     updateCardToggleState(card.id);
@@ -397,8 +403,10 @@ function loadStats() {
 DOM.btnStart.addEventListener('click', initGame);
 DOM.btnRestart.addEventListener('click', initGame);
 
-DOM.btnCardToggle.addEventListener('click', toggleCurrentCard);
-DOM.btnCardToggleBack.addEventListener('click', toggleCurrentCard);
+DOM.btnCardPlus.addEventListener('click', (e) => setCardEnabledState(e, true));
+DOM.btnCardPlusBack.addEventListener('click', (e) => setCardEnabledState(e, true));
+DOM.btnCardMinus.addEventListener('click', (e) => setCardEnabledState(e, false));
+DOM.btnCardMinusBack.addEventListener('click', (e) => setCardEnabledState(e, false));
 
 DOM.flashcard.addEventListener('click', () => {
     if (!isFlipped) flipCard();
