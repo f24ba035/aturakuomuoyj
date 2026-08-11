@@ -236,6 +236,8 @@ body {
     justify-content: center;
     transition: all 0.2s ease;
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
 }
 
 .card-btn.btn-plus {
