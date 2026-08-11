@@ -55,6 +55,7 @@ let isFlipped = false;
 const DOM = {
     gameView: document.getElementById('game-view'),
     statsView: document.getElementById('stats-view'),
+    settingsView: document.getElementById('settings-view'),
     flashcard: document.getElementById('flashcard'),
     cardInitial: document.getElementById('card-initial'),
     cardInitialBack: document.getElementById('card-initial-back'),
@@ -76,14 +77,58 @@ const DOM = {
     btnRestart: document.getElementById('btn-restart'),
     btnViewStats: document.getElementById('btn-view-stats'),
     
+    btnSettingsNav: document.getElementById('settings-btn'),
+    btnSettingsBack: document.getElementById('btn-settings-back'),
     btnStatsNav: document.getElementById('stats-btn'),
     btnBackNav: document.getElementById('btn-back'),
     
     statTotalSessions: document.getElementById('stat-total-sessions'),
     statHighScore: document.getElementById('stat-high-score'),
     historyList: document.getElementById('history-list'),
-    emptyHistory: document.getElementById('empty-history')
+    emptyHistory: document.getElementById('empty-history'),
+    
+    settingsCardList: document.getElementById('settings-card-list'),
+    selectedCountBadge: document.getElementById('selected-count-badge'),
+    btnSelectAll: document.getElementById('btn-select-all'),
+    btnDeselectAll: document.getElementById('btn-deselect-all')
 };
+
+// Storage
+const Storage = {
+    getKey: () => 'jomokaruta_history',
+    getSettingsKey: () => 'jomokaruta_enabled_ids',
+    getHistory: () => {
+        try {
+            return JSON.parse(localStorage.getItem(Storage.getKey())) || [];
+        } catch {
+            return [];
+        }
+    },
+    saveResult: (score, total) => {
+        const history = Storage.getHistory();
+        history.unshift({
+            id: Date.now(),
+            date: new Date().toISOString(),
+            score,
+            total
+        });
+        if (history.length > 50) history.length = 50;
+        localStorage.setItem(Storage.getKey(), JSON.stringify(history));
+    },
+    getEnabledIds: () => {
+        try {
+            const saved = localStorage.getItem(Storage.getSettingsKey());
+            if (saved) return new Set(JSON.parse(saved));
+        } catch {}
+        // Default: all cards enabled
+        return new Set(karutaData.map(c => c.id));
+    },
+    saveEnabledIds: (enabledSet) => {
+        localStorage.setItem(Storage.getSettingsKey(), JSON.stringify(Array.from(enabledSet)));
+    }
+};
+
+let enabledCardIds = Storage.getEnabledIds();
 
 // Utils
 function shuffleArray(array) {
@@ -102,33 +147,17 @@ function formatDate(date) {
     return { dateStr, timeStr };
 }
 
-// Storage
-const Storage = {
-    getKey: () => 'jomokaruta_history',
-    getHistory: () => {
-        try {
-            return JSON.parse(localStorage.getItem(Storage.getKey())) || [];
-        } catch {
-            return [];
-        }
-    },
-    saveResult: (score, total) => {
-        const history = Storage.getHistory();
-        history.unshift({
-            id: Date.now(),
-            date: new Date().toISOString(),
-            score,
-            total
-        });
-        // Keep last 50 records
-        if (history.length > 50) history.length = 50;
-        localStorage.setItem(Storage.getKey(), JSON.stringify(history));
-    }
-};
-
 // Game Logic
 function initGame() {
-    currentDeck = shuffleArray(karutaData);
+    const activeCards = karutaData.filter(card => enabledCardIds.has(card.id));
+    
+    if (activeCards.length === 0) {
+        alert('出題対象のかるたが1枚も選択されていません。設定画面で1枚以上選択してください。');
+        showSettings();
+        return;
+    }
+    
+    currentDeck = shuffleArray(activeCards);
     currentIndex = 0;
     score = 0;
     
@@ -164,7 +193,7 @@ function flipCard() {
     
     setTimeout(() => {
         DOM.controls.classList.remove('hidden');
-    }, 150); // Show buttons slightly after animation starts
+    }, 150);
 }
 
 function nextCard(remembered) {
@@ -172,7 +201,6 @@ function nextCard(remembered) {
         score++;
         DOM.scoreCount.textContent = score;
         
-        // Add small scale animation to score
         DOM.scoreCount.style.transform = 'scale(1.5)';
         DOM.scoreCount.style.color = '#34d399';
         setTimeout(() => {
@@ -186,7 +214,6 @@ function nextCard(remembered) {
     if (currentIndex >= currentDeck.length) {
         endGame();
     } else {
-        // Prepare next card, waiting for flip animation if we want a smooth transition
         DOM.flashcard.classList.remove('is-flipped');
         DOM.controls.classList.add('hidden');
         setTimeout(() => {
@@ -201,7 +228,6 @@ function endGame() {
     
     DOM.finalScore.textContent = score;
     
-    // Set message based on score
     const ratio = score / currentDeck.length;
     if (ratio === 1) {
         DOM.resultMessage.textContent = '完璧です！完全制覇！🎉';
@@ -217,6 +243,87 @@ function endGame() {
         DOM.resultScreen.classList.remove('hidden');
         DOM.resultScreen.classList.add('active');
     }, 400);
+}
+
+// Settings Logic
+function renderSettingsList() {
+    DOM.settingsCardList.innerHTML = '';
+    DOM.selectedCountBadge.textContent = `選択中: ${enabledCardIds.size} / ${karutaData.length}枚`;
+
+    karutaData.forEach(card => {
+        const isEnabled = enabledCardIds.has(card.id);
+        const plainText = card.text.replace(/<ruby>(.*?)<rt>.*?<\/rt><\/ruby>/g, '$1');
+        
+        const item = document.createElement('div');
+        item.className = `setting-card-item ${isEnabled ? '' : 'disabled'}`;
+        item.innerHTML = `
+            <div class="setting-card-info">
+                <span class="setting-card-initial">${card.id}</span>
+                <span class="setting-card-text">${plainText}</span>
+            </div>
+            <button class="toggle-btn ${isEnabled ? 'plus' : 'minus'}" title="${isEnabled ? '出題に含める (+)' : '出題から外す (ー)'}">
+                ${isEnabled ? '＋' : 'ー'}
+            </button>
+        `;
+
+        const toggleBtn = item.querySelector('.toggle-btn');
+        toggleBtn.addEventListener('click', () => {
+            if (enabledCardIds.has(card.id)) {
+                enabledCardIds.delete(card.id);
+            } else {
+                enabledCardIds.add(card.id);
+            }
+            Storage.saveEnabledIds(enabledCardIds);
+            renderSettingsList();
+        });
+
+        DOM.settingsCardList.appendChild(item);
+    });
+}
+
+DOM.btnSelectAll.addEventListener('click', () => {
+    karutaData.forEach(c => enabledCardIds.add(c.id));
+    Storage.saveEnabledIds(enabledCardIds);
+    renderSettingsList();
+});
+
+DOM.btnDeselectAll.addEventListener('click', () => {
+    enabledCardIds.clear();
+    Storage.saveEnabledIds(enabledCardIds);
+    renderSettingsList();
+});
+
+// Navigation Logic
+function hideAllViews() {
+    DOM.gameView.classList.remove('active');
+    DOM.statsView.classList.remove('active');
+    DOM.settingsView.classList.remove('active');
+    DOM.gameView.style.display = 'none';
+    DOM.statsView.style.display = 'none';
+    DOM.settingsView.style.display = 'none';
+}
+
+function showStats() {
+    loadStats();
+    hideAllViews();
+    DOM.statsView.style.display = 'flex';
+    void DOM.statsView.offsetWidth;
+    DOM.statsView.classList.add('active');
+}
+
+function showSettings() {
+    renderSettingsList();
+    hideAllViews();
+    DOM.settingsView.style.display = 'flex';
+    void DOM.settingsView.offsetWidth;
+    DOM.settingsView.classList.add('active');
+}
+
+function showGame() {
+    hideAllViews();
+    DOM.gameView.style.display = 'flex';
+    void DOM.gameView.offsetWidth;
+    DOM.gameView.classList.add('active');
 }
 
 // Stats View Logic
@@ -253,28 +360,6 @@ function loadStats() {
     }
 }
 
-function showStats() {
-    loadStats();
-    DOM.gameView.classList.remove('active');
-    setTimeout(() => {
-        DOM.gameView.style.display = 'none';
-        DOM.statsView.style.display = 'flex';
-        // force reflow
-        void DOM.statsView.offsetWidth;
-        DOM.statsView.classList.add('active');
-    }, 100); // small delay to wait for hide if needed
-}
-
-function showGame() {
-    DOM.statsView.classList.remove('active');
-    setTimeout(() => {
-        DOM.statsView.style.display = 'none';
-        DOM.gameView.style.display = 'flex';
-        void DOM.gameView.offsetWidth;
-        DOM.gameView.classList.add('active');
-    }, 100);
-}
-
 // Event Listeners
 DOM.btnStart.addEventListener('click', initGame);
 DOM.btnRestart.addEventListener('click', initGame);
@@ -290,7 +375,10 @@ DOM.btnStatsNav.addEventListener('click', showStats);
 DOM.btnViewStats.addEventListener('click', showStats);
 DOM.btnBackNav.addEventListener('click', showGame);
 
+DOM.btnSettingsNav.addEventListener('click', showSettings);
+DOM.btnSettingsBack.addEventListener('click', showGame);
+
 // Init UI State
-DOM.gameView.style.display = 'flex';
-DOM.statsView.style.display = 'none';
+showGame();
 DOM.progressBar.style.width = '0%';
+
