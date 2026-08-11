@@ -60,6 +60,8 @@ const DOM = {
     cardInitial: document.getElementById('card-initial'),
     cardInitialBack: document.getElementById('card-initial-back'),
     cardText: document.getElementById('card-text'),
+    btnCardToggle: document.getElementById('btn-card-toggle'),
+    btnCardToggleBack: document.getElementById('btn-card-toggle-back'),
     controls: document.getElementById('controls'),
     
     progressBar: document.getElementById('progress-bar'),
@@ -180,10 +182,41 @@ function updateCard() {
     DOM.cardInitialBack.textContent = card.id;
     DOM.cardText.innerHTML = card.text;
     
+    updateCardToggleState(card.id);
+    
     // Update progress
     DOM.currentCount.textContent = `${currentIndex + 1} / ${currentDeck.length}`;
     const progressPercent = (currentIndex / currentDeck.length) * 100;
     DOM.progressBar.style.width = `${progressPercent}%`;
+}
+
+function updateCardToggleState(cardId) {
+    const isEnabled = enabledCardIds.has(cardId);
+    [DOM.btnCardToggle, DOM.btnCardToggleBack].forEach(btn => {
+        if (!btn) return;
+        if (isEnabled) {
+            btn.className = 'card-toggle-btn plus';
+            btn.textContent = '＋';
+            btn.title = '出題リストに含まれています (タップで次回から除外)';
+        } else {
+            btn.className = 'card-toggle-btn minus';
+            btn.textContent = 'ー';
+            btn.title = '出題リストから外されています (タップで次回から追加)';
+        }
+    });
+}
+
+function toggleCurrentCard(e) {
+    e.stopPropagation();
+    if (currentIndex >= currentDeck.length) return;
+    const card = currentDeck[currentIndex];
+    if (enabledCardIds.has(card.id)) {
+        enabledCardIds.delete(card.id);
+    } else {
+        enabledCardIds.add(card.id);
+    }
+    Storage.saveEnabledIds(enabledCardIds);
+    updateCardToggleState(card.id);
 }
 
 function flipCard() {
@@ -363,6 +396,9 @@ function loadStats() {
 // Event Listeners
 DOM.btnStart.addEventListener('click', initGame);
 DOM.btnRestart.addEventListener('click', initGame);
+
+DOM.btnCardToggle.addEventListener('click', toggleCurrentCard);
+DOM.btnCardToggleBack.addEventListener('click', toggleCurrentCard);
 
 DOM.flashcard.addEventListener('click', () => {
     if (!isFlipped) flipCard();
